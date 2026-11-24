@@ -1,0 +1,403 @@
+
+import 'package:flutter/material.dart';
+
+import '../home/home_screen.dart';
+
+// ملاحظة: التخزين هنا مؤقت (بالذاكرة) للتجربة على المتصفح.
+// على الجوال استخدم flutter_secure_storage بدله.
+
+const appName = 'Chargify'; // غيّرها إلى ChargeSpot إذا هذا الاسم النهائي
+const kCyan = Color(0xFF22D3EE);
+const kFieldBg = Color(0xFF0B2A33);
+const kBorder = Color(0xFF1E4D5A);
+
+// ======================= Auth Service (S34) =======================
+// التوكن والدور يتخزنون في مخزن آمن (Keychain / Keystore)
+
+class AuthResult {
+  final String token;
+  final String role; // driver | admin | operator ...
+  AuthResult(this.token, this.role);
+}
+
+class AuthException implements Exception {
+  final String message;
+  AuthException(this.message);
+}
+
+class AuthService {
+  static final Map<String, String> _storage = {};
+
+  Future<AuthResult> signIn(String email, String password) async {
+    // TODO: استبدلها بنداء الـ Backend الحقيقي (POST /auth/login)
+    await Future.delayed(const Duration(seconds: 1));
+    return AuthResult('demo-token', 'driver');
+  }
+
+  Future<AuthResult> signUp({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    // TODO: استبدلها بنداء الـ Backend الحقيقي (POST /auth/register)
+    // الدور يتحدد دايمًا driver في تطبيق السائق
+    await Future.delayed(const Duration(seconds: 1));
+    return AuthResult('demo-token', 'driver');
+  }
+
+  Future<void> saveSession(AuthResult r) async {
+    _storage['token'] = r.token;
+    _storage['role'] = r.role;
+  }
+
+  Future<void> signOut() async => _storage.clear();
+}
+
+// ======================= Validators (التحقق من البيانات) =======================
+
+class Validators {
+  static String? name(String? v) {
+    if (v == null || v.trim().length < 3) return 'Enter your full name';
+    return null;
+  }
+
+  static String? email(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Enter your email';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+      return 'Invalid email';
+    }
+    return null;
+  }
+
+  static String? phone(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Enter your phone number';
+    if (!RegExp(r'^\+?\d{9,15}$').hasMatch(v.trim())) {
+      return 'Invalid phone number';
+    }
+    return null;
+  }
+
+  static String? password(String? v) {
+    if (v == null || v.isEmpty) return 'Enter your password';
+    if (v.length < 8) return 'At least 8 characters';
+    if (!RegExp(r'[A-Za-z]').hasMatch(v) || !RegExp(r'\d').hasMatch(v)) {
+      return 'Use letters and numbers';
+    }
+    return null;
+  }
+}
+
+// ======================= Auth Screen =======================
+
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _auth = AuthService();
+
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+
+  bool _isSignIn = true;
+  bool _obscure = true;
+  bool _obscureConfirm = true;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _loading = true);
+
+    try {
+      final result = _isSignIn
+          ? await _auth.signIn(_emailCtrl.text.trim(), _passCtrl.text)
+          : await _auth.signUp(
+              name: _nameCtrl.text.trim(),
+              email: _emailCtrl.text.trim(),
+              phone: _phoneCtrl.text.trim(),
+              password: _passCtrl.text,
+            );
+
+      // Role-Based Access Control (S30): تطبيق السائق للسائقين فقط
+      if (result.role != 'driver') {
+        throw AuthException('This app is for drivers only');
+      }
+
+      await _auth.saveSession(result);
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
+    );
+  }
+
+  InputDecoration _decoration(String hint, IconData icon, {Widget? suffix}) {
+    OutlineInputBorder border(Color c) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c),
+        );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+      prefixIcon: Icon(icon, color: Colors.white70, size: 18),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: kFieldBg,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      enabledBorder: border(kBorder),
+      focusedBorder: border(kCyan),
+      errorBorder: border(Colors.redAccent),
+      focusedErrorBorder: border(Colors.redAccent),
+    );
+  }
+
+  Widget _eye(bool obscure, VoidCallback onTap) => IconButton(
+        icon: Icon(
+          obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          color: Colors.white70,
+        ),
+        onPressed: onTap,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0A3A47), Color(0xFF04141A)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              // على الشاشات العريضة: الفورم بعرض ثابت 380 وفي الوسط
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width > 428
+                    ? (MediaQuery.of(context).size.width - 380) / 2
+                    : 24,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.bolt_rounded, size: 48, color: kCyan),
+                          SizedBox(height: 8),
+                          Text(
+                            appName,
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      _isSignIn ? 'Sign In' : 'Sign Up',
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isSignIn ? 'Welcome back!' : 'Create your driver account',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 20),
+
+                    if (!_isSignIn) ...[
+                      TextFormField(
+                        controller: _nameCtrl,
+                        textInputAction: TextInputAction.next,
+                        decoration:
+                            _decoration('Full Name', Icons.person_outline),
+                        validator: Validators.name,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      decoration: _decoration('Email', Icons.mail_outline),
+                      validator: Validators.email,
+                    ),
+                    const SizedBox(height: 14),
+
+                    if (!_isSignIn) ...[
+                      TextFormField(
+                        controller: _phoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        decoration:
+                            _decoration('Phone Number', Icons.phone_outlined),
+                        validator: Validators.phone,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    TextFormField(
+                      controller: _passCtrl,
+                      obscureText: _obscure,
+                      textInputAction: _isSignIn
+                          ? TextInputAction.done
+                          : TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        if (_isSignIn) _submit();
+                      },
+                      decoration: _decoration(
+                        'Password',
+                        Icons.lock_outline,
+                        suffix:
+                            _eye(_obscure, () => setState(() => _obscure = !_obscure)),
+                      ),
+                      // في تسجيل الدخول لا نفرض قواعد الباسورد، فقط عدم الفراغ
+                      validator: _isSignIn
+                          ? (v) => (v == null || v.isEmpty)
+                              ? 'Enter your password'
+                              : null
+                          : Validators.password,
+                    ),
+
+                    if (!_isSignIn) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirmCtrl,
+                        obscureText: _obscureConfirm,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: _decoration(
+                          'Confirm Password',
+                          Icons.lock_outline,
+                          suffix: _eye(
+                            _obscureConfirm,
+                            () => setState(
+                                () => _obscureConfirm = !_obscureConfirm),
+                          ),
+                        ),
+                        validator: (v) => v != _passCtrl.text
+                            ? 'Passwords do not match'
+                            : null,
+                      ),
+                    ],
+
+                    if (_isSignIn)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          child: const Text('Forgot Password?',
+                              style: TextStyle(color: kCyan)),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kCyan,
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.black),
+                              )
+                            : Text(
+                                _isSignIn ? 'Sign In' : 'Sign Up',
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _isSignIn
+                                ? "Don't have an account? "
+                                : 'Already have an account? ',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          GestureDetector(
+                            onTap: _loading
+                                ? null
+                                : () {
+                                    _formKey.currentState?.reset();
+                                    setState(() => _isSignIn = !_isSignIn);
+                                  },
+                            child: Text(
+                              _isSignIn ? 'Sign Up' : 'Sign In',
+                              style: const TextStyle(
+                                  color: kCyan, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
