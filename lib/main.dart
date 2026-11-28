@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'features/splash/splash_screen.dart'; 
 import 'features/auth/auth_screen.dart';
 
 void main() => runApp(const ChargifyApp());
@@ -13,7 +13,7 @@ class ChargifyApp extends StatelessWidget {
       title: appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(useMaterial3: true),
-      home: const AuthScreen(),
+      home: const SplashScreen(),
     );
   }
 }

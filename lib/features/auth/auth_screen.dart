@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../home/home_screen.dart';
 
-// ملاحظة: التخزين هنا مؤقت (بالذاكرة) للتجربة على المتصفح.
-// على الجوال استخدم flutter_secure_storage بدله.
 
-const appName = 'Chargify'; // غيّرها إلى ChargeSpot إذا هذا الاسم النهائي
+const appName = 'Chargify'; 
 const kCyan = Color(0xFF22D3EE);
 const kFieldBg = Color(0xFF0B2A33);
 const kBorder = Color(0xFF1E4D5A);
 
-// ======================= Auth Service (S34) =======================
-// التوكن والدور يتخزنون في مخزن آمن (Keychain / Keystore)
+// ======================= Auth Service =======================
+
 
 class AuthResult {
   final String token;
@@ -29,7 +27,7 @@ class AuthService {
   static final Map<String, String> _storage = {};
 
   Future<AuthResult> signIn(String email, String password) async {
-    // TODO: استبدلها بنداء الـ Backend الحقيقي (POST /auth/login)
+    
     await Future.delayed(const Duration(seconds: 1));
     return AuthResult('demo-token', 'driver');
   }
@@ -40,8 +38,7 @@ class AuthService {
     required String phone,
     required String password,
   }) async {
-    // TODO: استبدلها بنداء الـ Backend الحقيقي (POST /auth/register)
-    // الدور يتحدد دايمًا driver في تطبيق السائق
+   
     await Future.delayed(const Duration(seconds: 1));
     return AuthResult('demo-token', 'driver');
   }
@@ -137,7 +134,7 @@ class _AuthScreenState extends State<AuthScreen> {
               password: _passCtrl.text,
             );
 
-      // Role-Based Access Control (S30): تطبيق السائق للسائقين فقط
+      // Role-Based Access Control تطبيق السائق للسائقين فقط
       if (result.role != 'driver') {
         throw AuthException('This app is for drivers only');
       }
@@ -207,7 +204,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              // على الشاشات العريضة: الفورم بعرض ثابت 380 وفي الوسط
+              
               padding: EdgeInsets.symmetric(
                 horizontal: MediaQuery.of(context).size.width > 428
                     ? (MediaQuery.of(context).size.width - 380) / 2
@@ -398,6 +395,6 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
       ),
-    );
-  }
+    ); 
+    }
 }

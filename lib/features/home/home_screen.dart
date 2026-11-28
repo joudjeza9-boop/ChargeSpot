@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 
-// الألوان من ملف الـ Auth (نفس الثيم)
+
 import '../auth/auth_screen.dart' show kCyan, kFieldBg, kBorder;
 
 // ======================= Models =======================
@@ -22,8 +22,8 @@ class Station {
   });
 }
 
-// بيانات تجريبية. استبدلها بنداء الـ Backend
-// (S11: Search Nearby Charging Stations)
+
+// (Search Nearby Charging Stations)
 const _demoStations = <Station>[
   Station(
     name: 'Riyadh Front Station',
@@ -63,10 +63,10 @@ class StationFilter {
 // ======================= Home Screen =======================
 
 class HomeScreen extends StatefulWidget {
-  /// اسم المستخدم (من بيانات تسجيل الدخول)
+  /// اسم المستخدم 
   final String userName;
 
-  /// ربط الأزرار مع باقي الشاشات (اختياري)
+  /// ربط الأزرار مع باقي الشاشات
   final VoidCallback? onFindStations;
   final VoidCallback? onMyBookings;
   final VoidCallback? onMyUsage;
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening';
   }
 
-  // البحث + الفلترة + الترتيب حسب الأقرب (S11 + S12)
+  // البحث + الفلترة + الترتيب حسب الأقرب 
   List<Station> get _stations {
     final q = _searchCtrl.text.trim().toLowerCase();
     final list = _demoStations.where((s) {
@@ -413,7 +413,7 @@ class _StationTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            // مكان صورة المحطة (استبدلها بـ Image.network / asset)
+           
             Container(
               width: 56,
               height: 56,
@@ -455,7 +455,7 @@ class _StationTile extends StatelessWidget {
   }
 }
 
-// ======================= Filter Sheet (S12) =======================
+// ======================= Filter Sheet  =======================
 
 class _FilterSheet extends StatefulWidget {
   final StationFilter initial;
